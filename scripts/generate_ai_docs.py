@@ -128,6 +128,14 @@ def generate_docs(media_path: Path):
         
     except Exception as e:
         print(f"Error during generation: {e}")
+        # Create an error DOCX so the user knows exactly why it failed (e.g. Safety Filters)
+        import docx
+        docx_path = media_path.with_suffix('.docx')
+        doc = docx.Document()
+        doc.add_heading("AI Generation Failed", level=1)
+        doc.add_paragraph(f"The AI was unable to generate the brief. This usually happens if the content triggers Google's safety filters (e.g. profanity, dangerous content) or if the audio was too large.")
+        doc.add_paragraph(f"Error Details: {str(e)}")
+        doc.save(docx_path)
     finally:
         print("Cleaning up Gemini File API resource...")
         client.files.delete(name=uploaded_file.name)
