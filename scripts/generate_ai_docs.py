@@ -47,8 +47,12 @@ def generate_docs(media_path: Path):
         time.sleep(5)
 
     prompt = """
-    You are a Senior AI Systems Engineer specializing in automated media transcription and LLM document synthesis.
-    Parse the provided stream recording and output a comprehensive, post-meeting executive document using this EXACT strict Markdown format:
+    You are a Principal AI Systems Engineer and Expert Technical Analyst.
+    Your objective is to parse the provided 6-hour stream recording/transcript and output a hyper-detailed, comprehensive executive document.
+    
+    CRITICAL INSTRUCTION: You are processing a long-context file. DO NOT summarize or skip over technical details. You must be exhaustive. If a tool, framework, specific strategy, or action item is mentioned at ANY point in the stream, it MUST be extracted and documented. Expand on points deeply rather than glossing over them. Use maximum analytical depth.
+
+    Output using this EXACT strict Markdown format:
 
     # 📌 StreamVault Executive Brief
     **Source Stream:** Extract from context
@@ -57,30 +61,36 @@ def generate_docs(media_path: Path):
     ---
 
     ## 💡 Executive Summary
-    [3-4 high-density paragraphs summarizing the core focus, context, and outcomes of the session]
+    [3-5 high-density paragraphs summarizing the core focus, context, and all major outcomes of the session. Be specific.]
 
     ---
 
     ## 🎯 Key Decisions & Action Items
-    - [ ] **Action Item:** Description, owner, or context mentioned
-    - [ ] **Core Decision:** Key choices or resolutions finalized during the stream
+    - [ ] **Action Item:** [Specific task], [Owner if mentioned], [Context]
+    - [ ] **Core Decision:** [Key choices or resolutions finalized during the stream]
+    *(Extract EVERY single action item or decision mentioned, no matter how small).*
 
     ---
 
     ## ⏱️ Timestamped Agenda & Discussion Breakdown
-    - **[00:00 - 15:30] Introduction & Setup:** Detailed key points...
-    - **[15:31 - 45:00] Deep Dive / Live Demonstration:** Tools mentioned, code walkthroughs, concepts...
-    - **[45:01 - End] Q&A & Wrap-Up:** Audience questions and direct responses given...
+    *(Break the entire stream down into logical chronological blocks. For each block, provide exhaustive bullet points of what was discussed, including quotes, specific metrics, or technical steps).*
+    - **[00:00 - 15:30] Phase 1: [Topic]** 
+      * Detail 1...
+      * Detail 2...
+    - **[15:31 - 45:00] Phase 2: [Topic]** 
+      * Detail 1...
+    - **[45:01 - End] Phase 3: [Topic]** 
+      * Detail 1...
 
     ---
 
-    ## 🛠️ Tools, 3rd Party Software & Insights Mentioned
-    * List all software, frameworks, APIs, external services, or strategic insights highlighted in the stream.
+    ## 🛠️ Tools, 3rd Party Software & Technical Insights
+    * List EVERY piece of software, framework, API, external service, or strategic insight highlighted in the stream. Explain HOW it was used.
 
     ---
 
     ## 🧠 Strategic Frameworks & Key Takeaways
-    * Core concepts and takeaways formulated during the broadcast.
+    * Deep-dive bullet points covering foundational concepts, workflows, and takeaways formulated during the broadcast.
     """
 
     print("Synthesizing Executive Brief via Gemini 1.5 Pro...")
