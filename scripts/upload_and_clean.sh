@@ -37,19 +37,45 @@ fi
 echo "Triggering AI Documentation Engine..."
 python3 "$SCRIPT_DIR/generate_ai_docs.py" "$FILE_PATH"
 
-MD_PATH="${FILE_PATH%.*}.md"
+TXT_PATH="${FILE_PATH%.*}.txt"
 
 START_TIME=$(date +%s)
 
-# 2. Upload Video and Document via rclone move
+# 2. Telegram Alert with Attached Document
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+    echo "Sending Telegram alert with AI Document attached..."
+    if [ -f "$TXT_PATH" ]; then
+        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+            -F chat_id="${TELEGRAM_CHAT_ID}" \
+            -F document=@"$TXT_PATH" \
+            -F caption="✅ *StreamVault Success!*
+            
+Video uploaded for: \`${FILENAME}\`
+Here is your complete AI Executive Brief.
+
+Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
+            -F parse_mode="Markdown" > /dev/null
+    else
+        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="✅ *StreamVault Success!* (AI brief failed to generate)
+            
+Video uploaded for: \`${FILENAME}\`
+
+Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
+            -d parse_mode="Markdown" > /dev/null
+    fi
+fi
+
+# 3. Upload Video and Document via rclone move
 echo "Executing rclone move for media and documents..."
 rclone move "$FILE_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || {
     echo "Error: rclone move failed for $FILENAME"
     exit 1
 }
 
-if [ -f "$MD_PATH" ]; then
-    rclone move "$MD_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || true
+if [ -f "$TXT_PATH" ]; then
+    rclone move "$TXT_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || true
 fi
 
 END_TIME=$(date +%s)
@@ -57,29 +83,16 @@ DURATION=$((END_TIME - START_TIME))
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Successfully uploaded $FILENAME in ${DURATION}s."
 
-# 3. Secondary verification: ensure local staging is clean
+# 4. Secondary verification: ensure local staging is clean
 if [ -f "$FILE_PATH" ]; then
     rm -f "$FILE_PATH"
 fi
-if [ -f "$MD_PATH" ]; then
-    rm -f "$MD_PATH"
+if [ -f "$TXT_PATH" ]; then
+    rm -f "$TXT_PATH"
 fi
 # Clean any VTT files left behind
 VTT_PATH="${FILE_PATH%.*}.vtt"
 VTT_EN_PATH="${FILE_PATH%.*}.en.vtt"
 [ -f "$VTT_PATH" ] && rm -f "$VTT_PATH"
 [ -f "$VTT_EN_PATH" ] && rm -f "$VTT_EN_PATH"
-
-# 4. Telegram Alert
-if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-    echo "Sending Telegram alert..."
-    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d chat_id="${TELEGRAM_CHAT_ID}" \
-        -d text="✅ *StreamVault Success!*
-        
-Video and AI Brief uploaded for: \`${FILENAME}\`
-
-Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
-        -d parse_mode="Markdown" > /dev/null
-fi
 
