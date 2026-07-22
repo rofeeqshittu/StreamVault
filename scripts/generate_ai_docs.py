@@ -115,7 +115,10 @@ def generate_docs(media_path: Path):
         client.files.delete(name=uploaded_file.name)
         # Clean up local mp3 if we extracted it
         if media_path.suffix == '.mp3':
-            os.remove(media_path)
+            try:
+                os.remove(media_path)
+            except OSError:
+                pass
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

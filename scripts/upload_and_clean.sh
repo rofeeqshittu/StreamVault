@@ -93,6 +93,6 @@ fi
 # Clean any VTT files left behind
 VTT_PATH="${FILE_PATH%.*}.vtt"
 VTT_EN_PATH="${FILE_PATH%.*}.en.vtt"
-[ -f "$VTT_PATH" ] && rm -f "$VTT_PATH"
-[ -f "$VTT_EN_PATH" ] && rm -f "$VTT_EN_PATH"
+[ -f "$VTT_PATH" ] && rm -f "$VTT_PATH" || true
+[ -f "$VTT_EN_PATH" ] && rm -f "$VTT_EN_PATH" || true
 
