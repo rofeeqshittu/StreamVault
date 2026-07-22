@@ -4,9 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Source environment
+# Source environment and export variables to child processes
 if [ -f "$BASE_DIR/.env" ]; then
+    set -a
     source "$BASE_DIR/.env"
+    set +a
 fi
 
 GDRIVE_REMOTE="${GDRIVE_REMOTE:-gdrive}"
