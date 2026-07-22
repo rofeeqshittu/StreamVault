@@ -54,7 +54,6 @@ def trigger_download(url, skip_upload=False):
     cmd = [
         "yt-dlp",
         "--extractor-args", "youtube:player_client=ios,android,web",
-        "--write-auto-sub",
         "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "-o", f"{staging_dir}/ondemand_%(uploader)s_%(id)s.%(ext)s",
         "--exec", f"{upload_script} {{}}",
