@@ -104,12 +104,20 @@ def main():
                     print(f"Ignored unauthorized message from chat_id: {chat_id}")
                     continue
                     
+                if text.strip().lower() == "/status":
+                    screen_out = subprocess.run(["screen", "-list"], capture_output=True, text=True).stdout
+                    is_running = "streamvault" in screen_out.lower()
+                    
+                    status_text = "🟢 *Monitor is ACTIVE* (Running in background)" if is_running else "🔴 *Monitor is OFFLINE* (Not running)"
+                    send_message(f"📊 *StreamVault Status*\n\n{status_text}")
+                    continue
+
                 url = extract_url(text)
                 if url:
                     send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. You will receive the AI Brief when it completes.")
                     trigger_download(url)
                 else:
-                    send_message("❌ No URL detected. Please send a valid YouTube link.")
+                    send_message("❌ No URL detected. Send a YouTube link to download, or type `/status` to check the live monitor.")
                     
         except Exception as e:
             print(f"Polling error: {e}")
