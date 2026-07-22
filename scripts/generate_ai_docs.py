@@ -41,6 +41,8 @@ def generate_docs(media_path: Path):
     # If the name was entirely non-ASCII (e.g., full Arabic/Chinese title), fallback to timestamp
     if len(safe_name_str) <= 4:
         safe_name_str = f"upload_{int(time.time())}{media_path.suffix}"
+    else:
+        safe_name_str = f"gemini_{safe_name_str}"
         
     safe_path = media_path.with_name(safe_name_str)
     shutil.copy2(media_path, safe_path)
