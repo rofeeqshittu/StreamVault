@@ -96,7 +96,7 @@ def generate_docs(media_path: Path):
     print("Synthesizing Executive Brief via Gemini 1.5 Pro...")
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-pro',
+            model='gemini-1.5-pro-latest',
             contents=[uploaded_file, prompt],
             config=types.GenerateContentConfig(temperature=0.2)
         )
