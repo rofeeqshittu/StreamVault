@@ -45,7 +45,7 @@ rclone config
 Clone the StreamVault repository to `/opt/StreamVault`:
 
 ```bash
-sudo git clone https://github.com/yourusername/StreamVault.git /opt/StreamVault
+sudo git clone https://github.com/rofeeqshittu/StreamVault.git /opt/StreamVault
 cd /opt/StreamVault
 ```
 
