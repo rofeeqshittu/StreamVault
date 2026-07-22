@@ -33,15 +33,19 @@ def send_message(text):
 
 import threading
 
-def run_download_task(cmd, url):
-    process = subprocess.run(cmd, capture_output=True, text=True)
+def run_download_task(cmd, url, skip_upload=False):
+    env = os.environ.copy()
+    if skip_upload:
+        env["SKIP_VIDEO_UPLOAD"] = "1"
+        
+    process = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if process.returncode != 0:
         # If it failed, grab the last few lines of the error to help debug
         error_lines = process.stderr.strip().split('\n')
         error_msg = '\n'.join(error_lines[-5:]) if error_lines else "Unknown error"
         send_message(f"❌ *Download Failed!*\n\nCould not download: `{url}`\n\n*Error details:*\n`{error_msg}`")
 
-def trigger_download(url):
+def trigger_download(url, skip_upload=False):
     staging_dir = BASE_DIR / 'staging'
     staging_dir.mkdir(exist_ok=True)
     
@@ -59,7 +63,7 @@ def trigger_download(url):
     
     print(f"Triggering background download for: {url}")
     # Spawn in background thread to catch errors without blocking bot loop
-    thread = threading.Thread(target=run_download_task, args=(cmd, url))
+    thread = threading.Thread(target=run_download_task, args=(cmd, url, skip_upload))
     thread.daemon = True
     thread.start()
 
@@ -134,8 +138,14 @@ def main():
 
                 url = extract_url(text)
                 if url:
-                    send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. You will receive the AI Brief when it completes.")
-                    trigger_download(url)
+                    skip_upload = "noupload" in text.lower().replace("-", "").replace("_", "")
+                    
+                    if skip_upload:
+                        send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. **Video upload to Google Drive will be skipped.** You will receive the AI Brief when it completes.")
+                    else:
+                        send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. You will receive the AI Brief when it completes.")
+                        
+                    trigger_download(url, skip_upload)
                 else:
                     send_message("❌ No URL detected. Send a YouTube link to download, or type `/status` to check the live monitor.")
                     

@@ -68,11 +68,15 @@ Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
 fi
 
 # 3. Upload Video and Document via rclone move
-echo "Executing rclone move for media and documents..."
-rclone move "$FILE_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || {
-    echo "Error: rclone move failed for $FILENAME"
-    exit 1
-}
+if [ "${SKIP_VIDEO_UPLOAD:-0}" != "1" ]; then
+    echo "Executing rclone move for media and documents..."
+    rclone move "$FILE_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || {
+        echo "Error: rclone move failed for $FILENAME"
+        exit 1
+    }
+else
+    echo "SKIP_VIDEO_UPLOAD flag is set. Skipping video upload to Google Drive."
+fi
 
 if [ -f "$DOCX_PATH" ]; then
     rclone move "$DOCX_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || true
