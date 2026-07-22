@@ -1,115 +1,108 @@
 # StreamVault
 
-StreamVault is a production-grade automated pipeline designed to run on a Google Cloud `e2-micro` instance (Ubuntu 24.04 LTS). It continuously monitors target YouTube Live channels, records streams directly to disk without re-encoding, uploads the completed streams to Google Drive via `rclone`, and immediately deletes local files to preserve the strict 30 GB persistent disk limit.
+StreamVault is a production-grade automated media and intelligence pipeline. It continuously monitors target YouTube Live channels, records streams in real-time, extracts transcripts/audio, runs the Gemini API to synthesize an executive meeting brief, uploads both the video and the document to Google Drive, and purges local storage to stay within strict disk limits.
 
-## Prerequisites
+## Architecture
+- **Server Target:** Optimized for GCP `e2-micro` (Ubuntu 24.04 LTS).
+- **Media Tools:** `yt-dlp`, `ffmpeg`.
+- **Cloud Storage:** `rclone` (Google Drive OAuth).
+- **AI Engine:** Google GenAI SDK (`gemini-1.5-pro` or `gemini-2.5-flash`).
+- **Alerts:** Telegram Bot API.
+- **Orchestration:** `systemd`.
 
-* Google Cloud `e2-micro` instance running Ubuntu 24.04 LTS.
-* 30 GB standard persistent disk.
-* A Google Drive account.
+---
 
-## Step-by-Step Setup Guide
+## 1. Installation & Prerequisites
 
-### 1. Provision the Environment & Install Dependencies
-
-SSH into your `e2-micro` instance and run:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y ffmpeg jq curl unzip git
-```
-
-Install the latest release of `yt-dlp`:
+SSH into your Google Cloud VM and install the required tools:
 
 ```bash
-sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
+sudo apt update
+sudo apt install -y git ffmpeg yt-dlp rclone python3 python3-pip python3-venv curl
 ```
 
-### 2. Configure Google Drive Authentication (rclone)
-
-Install `rclone` and initiate the configuration wizard:
-
+Install the Google GenAI SDK globally (or via a venv):
 ```bash
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-rclone config
+sudo pip3 install google-genai --break-system-packages
 ```
 
-1. Create a "New remote" by typing `n`.
-2. Assign it the name: `gdrive` (this is the default expected by StreamVault).
-3. Select the `drive` option for Google Drive.
-4. Follow the CLI prompts to complete the OAuth authentication. Leave Client ID/Secret blank if using defaults, and choose `1` for Full Access.
+---
 
-### 3. Repository Clone & Environment Setup
+## 2. Setting Up StreamVault
 
-Clone the StreamVault repository to `/opt/StreamVault`:
-
+Clone the repository to `/opt/StreamVault`:
 ```bash
 sudo git clone https://github.com/rofeeqshittu/StreamVault.git /opt/StreamVault
 cd /opt/StreamVault
+sudo chmod +x scripts/*.sh scripts/*.py
 ```
 
-Configure your environment and targets:
-
-1. Copy `.env.template` to `.env`:
-   ```bash
-   cp config/env.template .env
-   ```
-   *Edit `.env` if your `rclone` remote name is different from `gdrive`.*
-
-2. Add your target YouTube URLs to `config/channels.json`:
-   ```json
-   [
-     {
-       "name": "MyChannel",
-       "url": "https://www.youtube.com/@MyChannel/live"
-     }
-   ]
-   ```
-
-Make scripts executable:
+Create required directories:
 ```bash
-sudo chmod +x scripts/*.sh
+sudo mkdir -p staging logs
 ```
 
-### 4. Systemd Service Activation
+---
 
-Create the log directory:
+## 3. Configuration & API Keys
+
+Copy the environment template:
 ```bash
-mkdir -p logs
+sudo cp config/env.template .env
 ```
 
-Link the systemd service file and enable it to start on boot:
+Edit the `.env` file:
+```bash
+sudo nano .env
+```
+
+### Required Keys:
+1. **GEMINI_API_KEY:** Get a free API key from [Google AI Studio](https://aistudio.google.com/).
+2. **TELEGRAM_BOT_TOKEN:** Talk to `@BotFather` on Telegram to create a bot and get the token.
+3. **TELEGRAM_CHAT_ID:** Send a message to your bot, then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your `chat_id`.
+
+Edit your target channels:
+```bash
+sudo nano config/channels.json
+```
+*(Ensure you use the `/live` URL format, e.g., `https://www.youtube.com/@ChannelName/live`)*
+
+---
+
+## 4. Google Drive Connection
+
+Run the rclone interactive setup:
+```bash
+rclone config
+```
+1. Press `n` for New remote.
+2. Name it `gdrive`.
+3. Select `drive` (Google Drive).
+4. Leave Client ID/Secret blank.
+5. Choose scope `1` (Full access).
+6. Skip advanced config.
+7. Say `N` to auto-config (since you are headless).
+8. **Follow the instructions to authorize rclone from your personal computer** and paste the token back into the VM.
+
+---
+
+## 5. Enable the Background Service
+
+Once configured, tell Linux to start the system daemon:
 
 ```bash
-sudo ln -s /opt/StreamVault/systemd/streamvault.service /etc/systemd/system/
+sudo cp systemd/streamvault.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now streamvault
 ```
 
-Verify the service is running:
+To watch the live logs:
 ```bash
-sudo systemctl status streamvault
-tail -f logs/streamvault.log
+tail -f /opt/StreamVault/logs/streamvault.log
 ```
 
-## Architecture
-
-* **Monitor & Capture**: `scripts/monitor_and_capture.sh` polls YouTube for live streams and uses `yt-dlp` to capture them natively to save CPU overhead.
-* **Pipeline & Purge**: `scripts/upload_and_clean.sh` triggers post-capture. It uses `rclone move` to directly push the video to Google Drive and delete it locally.
-* **Safety**: `scripts/health_check.sh` monitors disk usage. You can schedule this script via `cron` to run periodically to delete orphaned temporary files.
-
-## Scheduling the Health Check
-
-To automatically monitor disk usage, add `health_check.sh` to a cron job:
-
-```bash
-sudo crontab -e
-```
-Add the following line to run the health check every hour:
-```
-0 * * * * /opt/StreamVault/scripts/health_check.sh >> /opt/StreamVault/logs/health.log 2>&1
-```
-
-## License
-MIT License
+## System Behavior
+- **Zero Transcoding:** Video is captured directly using stream-copy.
+- **Automatic Chunking:** If streams are extremely long, `yt-dlp` captures them safely. 
+- **Storage Limits:** Kept under 15 GB local limit. A health check ensures old orphaned files are wiped.
+- **AI Docs:** Subtitles are automatically extracted and pushed to Gemini to generate high-density notes.
