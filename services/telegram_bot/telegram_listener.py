@@ -31,6 +31,16 @@ def send_message(text):
         "parse_mode": "Markdown"
     })
 
+import threading
+
+def run_download_task(cmd, url):
+    process = subprocess.run(cmd, capture_output=True, text=True)
+    if process.returncode != 0:
+        # If it failed, grab the last few lines of the error to help debug
+        error_lines = process.stderr.strip().split('\n')
+        error_msg = '\n'.join(error_lines[-5:]) if error_lines else "Unknown error"
+        send_message(f"❌ *Download Failed!*\n\nCould not download: `{url}`\n\n*Error details:*\n`{error_msg}`")
+
 def trigger_download(url):
     staging_dir = BASE_DIR / 'staging'
     staging_dir.mkdir(exist_ok=True)
@@ -48,8 +58,10 @@ def trigger_download(url):
     ]
     
     print(f"Triggering background download for: {url}")
-    # Spawn in background, don't block the bot loop
-    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Spawn in background thread to catch errors without blocking bot loop
+    thread = threading.Thread(target=run_download_task, args=(cmd, url))
+    thread.daemon = True
+    thread.start()
 
 def extract_url(text):
     match = re.search(r'(https?://[^\s]+)', text)
