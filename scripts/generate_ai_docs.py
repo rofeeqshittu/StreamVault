@@ -96,10 +96,17 @@ def generate_docs(media_path: Path):
             config=types.GenerateContentConfig(temperature=0.2)
         )
         
-        txt_path = media_path.with_suffix('.txt')
-        with open(txt_path, "w") as f:
-            f.write(response.text)
-        print(f"Successfully generated: {txt_path.name}")
+        import docx
+        
+        docx_path = media_path.with_suffix('.docx')
+        doc = docx.Document()
+        
+        # Split text by newline and add as paragraphs to keep it clean
+        for line in response.text.split('\n'):
+            doc.add_paragraph(line)
+            
+        doc.save(docx_path)
+        print(f"Successfully generated: {docx_path.name}")
         
     except Exception as e:
         print(f"Error during generation: {e}")

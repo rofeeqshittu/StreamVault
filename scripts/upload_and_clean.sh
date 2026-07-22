@@ -37,17 +37,17 @@ fi
 echo "Triggering AI Documentation Engine..."
 python3 "$SCRIPT_DIR/generate_ai_docs.py" "$FILE_PATH"
 
-TXT_PATH="${FILE_PATH%.*}.txt"
+DOCX_PATH="${FILE_PATH%.*}.docx"
 
 START_TIME=$(date +%s)
 
 # 2. Telegram Alert with Attached Document
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
     echo "Sending Telegram alert with AI Document attached..."
-    if [ -f "$TXT_PATH" ]; then
+    if [ -f "$DOCX_PATH" ]; then
         curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             -F chat_id="${TELEGRAM_CHAT_ID}" \
-            -F document=@"$TXT_PATH" \
+            -F document=@"$DOCX_PATH" \
             -F caption="✅ *StreamVault Success!*
             
 Video uploaded for: \`${FILENAME}\`
@@ -74,8 +74,8 @@ rclone move "$FILE_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line
     exit 1
 }
 
-if [ -f "$TXT_PATH" ]; then
-    rclone move "$TXT_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || true
+if [ -f "$DOCX_PATH" ]; then
+    rclone move "$DOCX_PATH" "${GDRIVE_REMOTE}:/${GDRIVE_PATH}/" -v --stats-one-line || true
 fi
 
 END_TIME=$(date +%s)
@@ -87,8 +87,8 @@ echo "[$(date +'%Y-%m-%d %H:%M:%S')] Successfully uploaded $FILENAME in ${DURATI
 if [ -f "$FILE_PATH" ]; then
     rm -f "$FILE_PATH"
 fi
-if [ -f "$TXT_PATH" ]; then
-    rm -f "$TXT_PATH"
+if [ -f "$DOCX_PATH" ]; then
+    rm -f "$DOCX_PATH"
 fi
 # Clean any VTT files left behind
 VTT_PATH="${FILE_PATH%.*}.vtt"
