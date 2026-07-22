@@ -33,8 +33,17 @@ def generate_docs(media_path: Path):
 
     client = genai.Client(api_key=api_key)
     
+    import shutil
+    safe_name = f"upload_{int(time.time())}{media_path.suffix}"
+    safe_path = media_path.with_name(safe_name)
+    shutil.copy2(media_path, safe_path)
+    
     print(f"Uploading {media_path.name} to Gemini...")
-    uploaded_file = client.files.upload(file=str(media_path))
+    try:
+        uploaded_file = client.files.upload(file=str(safe_path))
+    finally:
+        if safe_path.exists():
+            os.remove(safe_path)
     
     print("Waiting for file processing to complete...")
     while True:
