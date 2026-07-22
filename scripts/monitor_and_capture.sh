@@ -39,7 +39,6 @@ capture_stream() {
         # --exec to call upload script when done
         yt-dlp \
             --wait-for-video 60 \
-            --live-from-start \
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             -o "$STAGING_DIR/%(uploader)s_%(title)s_%(id)s_%(upload_date)s.%(ext)s" \
             --exec "$SCRIPT_DIR/upload_and_clean.sh {}" \
