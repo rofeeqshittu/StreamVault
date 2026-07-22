@@ -98,14 +98,10 @@ def generate_docs(media_path: Path):
         available_models = [m.name.replace('models/', '') for m in client.models.list()]
         print(f"Found models: {available_models}")
         
-        # Pick the most advanced flash model available to guarantee Free Tier compatibility
-        target_model = 'gemini-1.5-flash'
-        for m in available_models:
-            if '2.5-flash' in m and 'preview' not in m and 'audio' not in m:
-                target_model = m
-                break
-            elif '1.5-flash' in m and 'preview' not in m and '8b' not in m:
-                target_model = m
+        # In 2026, old models are locked for new users. 
+        # We explicitly use gemini-flash-latest to let Google dynamically route 
+        # to the newest active free-tier flash model (e.g. 3.5 or 3.6).
+        target_model = 'gemini-flash-latest'
                 
         print(f"Synthesizing Executive Brief via {target_model}...")
         response = client.models.generate_content(
