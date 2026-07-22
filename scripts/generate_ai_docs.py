@@ -93,10 +93,23 @@ def generate_docs(media_path: Path):
     * Deep-dive bullet points covering foundational concepts, workflows, and takeaways formulated during the broadcast.
     """
 
-    print("Synthesizing Executive Brief via Gemini 1.5 Pro...")
+    print("Querying available Gemini models...")
     try:
+        available_models = [m.name.replace('models/', '') for m in client.models.list()]
+        print(f"Found models: {available_models}")
+        
+        # Pick the most advanced pro model available, fallback to gemini-pro
+        target_model = 'gemini-pro'
+        for m in available_models:
+            if '2.5-pro' in m or '2.0-pro' in m:
+                target_model = m
+                break
+            elif '1.5-pro' in m:
+                target_model = m
+                
+        print(f"Synthesizing Executive Brief via {target_model}...")
         response = client.models.generate_content(
-            model='gemini-1.5-pro-latest',
+            model=target_model,
             contents=[uploaded_file, prompt],
             config=types.GenerateContentConfig(temperature=0.2)
         )
