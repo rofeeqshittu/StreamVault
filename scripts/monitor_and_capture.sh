@@ -39,6 +39,7 @@ capture_stream() {
         # --exec to call upload script when done
         yt-dlp \
             --wait-for-video 60 \
+            --extractor-args "youtube:player_client=ios,android,web" \
             --write-auto-sub \
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             -o "$STAGING_DIR/%(uploader)s_%(title)s_%(id)s_%(upload_date)s.%(ext)s" \
