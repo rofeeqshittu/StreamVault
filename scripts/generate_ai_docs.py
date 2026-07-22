@@ -125,14 +125,8 @@ if __name__ == "__main__":
         print(f"File not found: {video_path}")
         sys.exit(1)
         
-    # Check if a VTT transcript exists
-    vtt_path = video_path.with_suffix('.en.vtt')
-    if not vtt_path.exists():
-        vtt_path = video_path.with_suffix('.vtt')
-        
-    if vtt_path.exists():
-        print(f"Found transcript: {vtt_path.name}")
-        generate_docs(vtt_path)
-    else:
-        audio_path = extract_audio(video_path)
-        generate_docs(audio_path)
+    # We explicitly extract MP3 audio and feed it directly to Gemini.
+    # Gemini's native audio engine is vastly superior to YouTube's auto-captions
+    # for picking up technical jargon, speaker changes, and nuances.
+    audio_path = extract_audio(video_path)
+    generate_docs(audio_path)
