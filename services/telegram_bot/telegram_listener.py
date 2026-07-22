@@ -109,7 +109,27 @@ def main():
                     is_running = "streamvault" in screen_out.lower()
                     
                     status_text = "🟢 *Monitor is ACTIVE* (Running in background)" if is_running else "🔴 *Monitor is OFFLINE* (Not running)"
-                    send_message(f"📊 *StreamVault Status*\n\n{status_text}")
+                    
+                    # Check for active downloads
+                    ps_out = subprocess.run(["ps", "-eo", "etime,args"], capture_output=True, text=True).stdout
+                    downloads = []
+                    for line in ps_out.split('\n'):
+                        if 'yt-dlp' in line and 'grep' not in line:
+                            parts = line.strip().split(maxsplit=1)
+                            if len(parts) == 2:
+                                etime, cmd = parts
+                                urls = re.findall(r'(https?://[^\s]+)', cmd)
+                                target = urls[0] if urls else "Unknown URL"
+                                
+                                # Format nicely based on whether it's the 24/7 monitor or an on-demand download
+                                if "wait-for-video" in cmd:
+                                    downloads.append(f"📡 *Live Monitor / Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*")
+                                else:
+                                    downloads.append(f"⚡ *On-Demand Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*")
+                                    
+                    dl_text = "\n\n".join(downloads) if downloads else "No active downloads."
+                    
+                    send_message(f"📊 *StreamVault Status*\n\n{status_text}\n\n*Current Activity:*\n{dl_text}")
                     continue
 
                 url = extract_url(text)
