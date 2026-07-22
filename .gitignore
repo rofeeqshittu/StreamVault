@@ -1,0 +1,9 @@
+.env
+*.mp4
+*.mkv
+*.webm
+*.part
+*.tmp
+logs/
+rclone.conf
+staging/

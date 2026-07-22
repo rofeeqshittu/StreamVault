@@ -1,0 +1,19 @@
+[Unit]
+Description=StreamVault YouTube Capture Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+# Change WorkingDirectory and ExecStart paths based on actual deployment path.
+# Assumes cloned to /opt/StreamVault
+WorkingDirectory=/opt/StreamVault
+ExecStart=/opt/StreamVault/scripts/monitor_and_capture.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/StreamVault/logs/streamvault.log
+StandardError=append:/opt/StreamVault/logs/streamvault.log
+
+[Install]
+WantedBy=multi-user.target
