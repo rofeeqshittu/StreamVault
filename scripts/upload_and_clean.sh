@@ -4,6 +4,23 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
+function handle_error() {
+    local exit_code=$?
+    local line_no=$1
+    echo "Error occurred at line $line_no (Exit code: $exit_code)"
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="❌ *Post-Processing Error!*
+            
+A critical failure occurred while processing: \`${FILENAME:-Unknown}\`
+Error occurred on line: $line_no
+Exit Code: $exit_code" \
+            -d parse_mode="Markdown" > /dev/null
+    fi
+}
+trap 'handle_error $LINENO' ERR
+
 # Source environment and export variables to child processes
 if [ -f "$BASE_DIR/.env" ]; then
     set -a
