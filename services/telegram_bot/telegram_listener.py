@@ -104,8 +104,8 @@ def main():
                     continue
                     
                 if text.strip().lower() == "/status":
-                    screen_out = subprocess.run(["screen", "-list"], capture_output=True, text=True).stdout
-                    is_running = "streamvault" in screen_out.lower()
+                    ps_check = subprocess.run(["ps", "aux"], capture_output=True, text=True).stdout
+                    is_running = any('monitor_and_capture.sh' in line and 'grep' not in line for line in ps_check.split('\n'))
                     
                     status_text = "🟢 *Monitor is ACTIVE* (Running in background)" if is_running else "🔴 *Monitor is OFFLINE* (Not running)"
                     
