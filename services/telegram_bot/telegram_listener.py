@@ -46,19 +46,15 @@ def run_download_task(cmd, url, skip_upload=False):
         send_message(f"❌ *Download Failed!*\n\nCould not download: `{url}`\n\n*Error details:*\n`{error_msg}`")
 
 def trigger_download(url, skip_upload=False):
-    staging_dir = BASE_DIR / 'staging'
-    staging_dir.mkdir(exist_ok=True)
-    
-    upload_script = BASE_DIR / 'scripts' / 'upload_and_clean.sh'
+    smart_monitor_script = BASE_DIR / 'scripts' / 'smart_monitor.py'
     
     cmd = [
-        "yt-dlp",
-        "--extractor-args", "youtube:player_client=ios,android,web",
-        "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "-o", f"{staging_dir}/ondemand_%(uploader)s_%(id)s.%(ext)s",
-        "--exec", f"{upload_script} {{}}",
+        "python3",
+        str(smart_monitor_script),
         url
     ]
+    if skip_upload:
+        cmd.append("--skip-upload")
     
     print(f"Triggering background download for: {url}")
     # Spawn in background thread to catch errors without blocking bot loop

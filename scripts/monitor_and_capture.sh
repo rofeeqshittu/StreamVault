@@ -31,25 +31,13 @@ capture_stream() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting monitor loop for $name: $url"
     
     while true; do
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] yt-dlp polling $url..."
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Launching smart_monitor for $name ($url)..."
         
-        # Capture stream using yt-dlp
-        # --wait-for-video to keep polling
-        # -f best to get best quality that doesn't need re-encoding
-        # --exec to call upload script when done
-        yt-dlp \
-            --wait-for-video 60 \
-            --retries infinite \
-            --fragment-retries infinite \
-            --retry-sleep 5 \
-            --extractor-args "youtube:player_client=ios,android,web" \
-            -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
-            -o "$STAGING_DIR/%(uploader)s_%(title)s_%(id)s_%(upload_date)s.%(ext)s" \
-            --exec "$SCRIPT_DIR/upload_and_clean.sh {}" \
-            "$url" || true
+        # smart_monitor.py handles intermittent network drops and merging
+        python3 "$SCRIPT_DIR/smart_monitor.py" "$url" || true
             
-        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Stream ended or interrupted for $name. Waiting 10 seconds before retry..."
-        sleep 10
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] Broadcast ended for $name. Waiting 5 minutes before polling for new live streams..."
+        sleep 300
     done
 }
 

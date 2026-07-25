@@ -31,7 +31,8 @@ def generate_docs(media_path: Path):
         print("GEMINI_API_KEY not set. Skipping AI generation.")
         sys.exit(0)
 
-    client = genai.Client(api_key=api_key)
+    # Configure a 20-minute timeout (1200s) to prevent 'httpx.RemoteProtocolError' on long videos
+    client = genai.Client(api_key=api_key, http_options={'timeout': 1200.0})
     
     import shutil
     import time
@@ -108,11 +109,23 @@ def generate_docs(media_path: Path):
         target_model = 'gemini-flash-latest'
                 
         print(f"Synthesizing Executive Brief via {target_model}...")
-        response = client.models.generate_content(
-            model=target_model,
-            contents=[uploaded_file, prompt],
-            config=types.GenerateContentConfig(temperature=0.2)
-        )
+        
+        # Robust retry loop for transient network/API drops during long generations
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=target_model,
+                    contents=[uploaded_file, prompt],
+                    config=types.GenerateContentConfig(temperature=0.2)
+                )
+                break
+            except Exception as e:
+                print(f"Generation attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise e
+                time.sleep(15 * (attempt + 1))
         
         import docx
         
