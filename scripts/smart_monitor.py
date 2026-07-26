@@ -82,22 +82,26 @@ def smart_monitor(url, skip_upload=False):
     safe_prefix = "".join([c if c.isalnum() or c in ['_', '-'] else '_' for c in prefix])
     merged_file = staging_dir / f"ondemand_{safe_prefix}.mp4"
     
-    ffmpeg_cmd = [
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-        "-i", "concat_list.txt",
-        "-c", "copy",
-        str(merged_file.resolve())
-    ]
-    
-    try:
-        subprocess.run(ffmpeg_cmd, check=True, cwd=str(session_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"Merged successfully into {merged_file.name}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error during FFmpeg merge: {e}")
-        # If merge fails, just use the largest chunk so we don't lose data
-        largest_chunk = max(chunks, key=lambda p: p.stat().st_size)
-        shutil.copy2(largest_chunk, merged_file)
-        print(f"Fallback: Used largest chunk {largest_chunk.name} instead.")
+    if len(chunks) == 1:
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Only 1 chunk recorded. Skipping FFmpeg merge to save disk space.")
+        shutil.move(str(chunks[0]), str(merged_file))
+    else:
+        ffmpeg_cmd = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", "concat_list.txt",
+            "-c", "copy",
+            str(merged_file.resolve())
+        ]
+        
+        try:
+            subprocess.run(ffmpeg_cmd, check=True, cwd=str(session_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"Merged successfully into {merged_file.name}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error during FFmpeg merge: {e}")
+            # If merge fails, just use the largest chunk so we don't lose data
+            largest_chunk = max(chunks, key=lambda p: p.stat().st_size)
+            shutil.move(str(largest_chunk), str(merged_file))
+            print(f"Fallback: Moved largest chunk {largest_chunk.name} instead.")
     
     if not skip_upload:
         upload_script = script_dir / "upload_and_clean.sh"
