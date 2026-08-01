@@ -5,6 +5,7 @@ echo "🚀 Starting StreamVault Auto-Update..."
 cd /opt/StreamVault || exit
 
 echo "📥 Pulling latest code from GitHub..."
+sudo git config --global --add safe.directory /opt/StreamVault
 sudo git pull
 
 echo "🧹 Cleaning up old processes (Killing zombies)..."
