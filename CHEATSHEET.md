@@ -12,7 +12,7 @@ sudo pkill -f "yt-dlp" || true
 sudo pkill -f "smart_monitor.py" || true
 sudo pkill -f "monitor_and_capture.sh" || true
 sudo pkill -f "telegram_listener.py" || true
-sudo nohup python3 services/telegram_bot/telegram_listener.py > bot.log 2>&1 &
+sudo nohup python3 -u services/telegram_bot/telegram_listener.py > bot.log 2>&1 &
 sudo nohup bash scripts/monitor_and_capture.sh > monitor.log 2>&1 &
 ```
 

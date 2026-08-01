@@ -115,7 +115,7 @@ def main():
                     staging_dir = BASE_DIR / "staging"
                     total_size_mb = 0
                     if staging_dir.exists():
-                        for root, _, files in os.walk(staging_dir):
+                        for root, _, files in os.walk(str(staging_dir)):
                             for f in files:
                                 if f.endswith(('.part', '.mp4', '.temp.mp4')):
                                     try:
