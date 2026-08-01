@@ -25,11 +25,13 @@ API_URL = ""
 def send_message(text):
     global API_URL
     ALLOWED_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-    requests.post(f"{API_URL}/sendMessage", data={
+    res = requests.post(f"{API_URL}/sendMessage", data={
         "chat_id": ALLOWED_CHAT_ID,
         "text": text,
         "parse_mode": "Markdown"
     })
+    if not res.ok:
+        print(f"Telegram API Error: {res.text}")
 
 import threading
 
@@ -97,6 +99,7 @@ def main():
                     
                 chat_id = str(message.get("chat", {}).get("id"))
                 text = message.get("text", "")
+                print(f"Received message from {chat_id}: {text}")
                 
                 # Military-grade security: Ignore anything not from the owner
                 if chat_id != str(ALLOWED_CHAT_ID):
