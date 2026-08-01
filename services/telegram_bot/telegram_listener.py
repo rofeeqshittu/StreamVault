@@ -128,6 +128,7 @@ def main():
                                         
                     size_text = f"\n💾 *Current Download Size:* `{total_size_mb:.1f} MB`" if total_size_mb > 0 else ""
 
+                    downloads = []
                     for line in ps_out.split('\n'):
                         if 'yt-dlp' in line and 'grep' not in line:
                             parts = line.strip().split(maxsplit=1)
