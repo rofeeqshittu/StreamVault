@@ -111,7 +111,20 @@ def main():
                     
                     # Check for active downloads
                     ps_out = subprocess.run(["ps", "-eo", "etime,args"], capture_output=True, text=True).stdout
-                    downloads = []
+                    # Calculate live download size
+                    staging_dir = BASE_DIR / "staging"
+                    total_size_mb = 0
+                    if staging_dir.exists():
+                        for root, _, files in os.walk(staging_dir):
+                            for f in files:
+                                if f.endswith(('.part', '.mp4', '.temp.mp4')):
+                                    try:
+                                        total_size_mb += os.path.getsize(os.path.join(root, f)) / (1024 * 1024)
+                                    except:
+                                        pass
+                                        
+                    size_text = f"\n💾 *Current Download Size:* `{total_size_mb:.1f} MB`" if total_size_mb > 0 else ""
+
                     for line in ps_out.split('\n'):
                         if 'yt-dlp' in line and 'grep' not in line:
                             parts = line.strip().split(maxsplit=1)
@@ -122,9 +135,9 @@ def main():
                                 
                                 # Format nicely based on whether it's the 24/7 monitor or an on-demand download
                                 if "wait-for-video" in cmd:
-                                    downloads.append(f"📡 *Live Monitor / Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*")
+                                    downloads.append(f"📡 *Live Monitor / Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
                                 else:
-                                    downloads.append(f"⚡ *On-Demand Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*")
+                                    downloads.append(f"⚡ *On-Demand Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
                                     
                     dl_text = "\n\n".join(downloads) if downloads else "No active downloads."
                     
