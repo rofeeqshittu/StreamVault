@@ -111,7 +111,7 @@ def smart_monitor(url, skip_upload=False):
             # Check disk space every 10 seconds
             total, used, free = shutil.disk_usage("/")
             free_mb = free / (1024 * 1024)
-            if free_mb < 500: # Less than 500 MB free
+            if free_mb < 1024: # Less than 1 GB free
                 print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CRITICAL: Low disk space ({free_mb:.0f} MB left). Force-cutting current chunk!")
                 process.terminate()
                 try:
@@ -122,6 +122,16 @@ def smart_monitor(url, skip_upload=False):
                 break
             time.sleep(10)
             
+        # yt-dlp might leave a .part or .temp.mp4 file if it was forcefully terminated
+        part_file = chunk_file.with_suffix('.mp4.part')
+        temp_file = chunk_file.with_name(chunk_file.name.replace('.mp4', '.temp.mp4'))
+        
+        if not chunk_file.exists():
+            if part_file.exists():
+                part_file.rename(chunk_file)
+            elif temp_file.exists():
+                temp_file.rename(chunk_file)
+
         if chunk_file.exists() and chunk_file.stat().st_size > 0:
             chunks.append(chunk_file)
             chunk_num += 1

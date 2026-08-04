@@ -31,8 +31,8 @@ def generate_docs(media_path: Path):
         print("GEMINI_API_KEY not set. Skipping AI generation.")
         sys.exit(0)
 
-    # Configure a 20-minute timeout (1200s) to prevent 'httpx.RemoteProtocolError' on long videos
-    client = genai.Client(api_key=api_key, http_options={'timeout': 1200.0})
+    # Configure a 10-minute timeout (600s) which is the maximum allowed by the API
+    client = genai.Client(api_key=api_key, http_options={'timeout': 600.0})
     
     import shutil
     import time
@@ -46,7 +46,7 @@ def generate_docs(media_path: Path):
         safe_name_str = f"gemini_{safe_name_str}"
         
     safe_path = media_path.with_name(safe_name_str)
-    shutil.copy2(media_path, safe_path)
+    os.rename(media_path, safe_path)
     
     print(f"Uploading {media_path.name} to Gemini...")
     try:
