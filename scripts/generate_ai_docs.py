@@ -31,8 +31,10 @@ def generate_docs(media_path: Path):
         print("GEMINI_API_KEY not set. Skipping AI generation.")
         sys.exit(0)
 
-    # Configure a 10-minute timeout (600s) which is the maximum allowed by the API
+    # Configure a 10-minute timeout (600s) which is the maximum allowed by the API for generation
     client = genai.Client(api_key=api_key, http_options={'timeout': 600.0})
+    # Configure a much longer timeout (60m) for uploading large audio files
+    upload_client = genai.Client(api_key=api_key, http_options={'timeout': 3600.0})
     
     import shutil
     import time
@@ -50,14 +52,14 @@ def generate_docs(media_path: Path):
     
     print(f"Uploading {media_path.name} to Gemini...")
     try:
-        uploaded_file = client.files.upload(file=str(safe_path))
+        uploaded_file = upload_client.files.upload(file=str(safe_path))
     finally:
         if safe_path.exists():
             os.remove(safe_path)
     
     print("Waiting for file processing to complete...")
     while True:
-        file_info = client.files.get(name=uploaded_file.name)
+        file_info = upload_client.files.get(name=uploaded_file.name)
         if file_info.state.name == "ACTIVE":
             break
         elif file_info.state.name == "FAILED":
@@ -151,7 +153,7 @@ def generate_docs(media_path: Path):
         doc.save(docx_path)
     finally:
         print("Cleaning up Gemini File API resource...")
-        client.files.delete(name=uploaded_file.name)
+        upload_client.files.delete(name=uploaded_file.name)
         # Clean up local mp3 if we extracted it
         if media_path.suffix == '.mp3':
             try:
