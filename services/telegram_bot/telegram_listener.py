@@ -113,21 +113,8 @@ def main():
                     status_text = "🟢 *Monitor is ACTIVE* (Running in background)" if is_running else "🔴 *Monitor is OFFLINE* (Not running)"
                     
                     # Check for active downloads
-                    ps_out = subprocess.run(["ps", "-eo", "etime,args"], capture_output=True, text=True).stdout
-                    # Calculate live download size
-                    staging_dir = BASE_DIR / "staging"
-                    total_size_mb = 0
-                    if staging_dir.exists():
-                        for root, _, files in os.walk(str(staging_dir)):
-                            for f in files:
-                                if f.endswith(('.part', '.mp4', '.temp.mp4')):
-                                    try:
-                                        total_size_mb += os.path.getsize(os.path.join(root, f)) / (1024 * 1024)
-                                    except:
-                                        pass
-                                        
-                    size_text = f"\n💾 *Current Download Size:* `{total_size_mb:.1f} MB`" if total_size_mb > 0 else ""
-
+                    ps_out = subprocess.run(["ps", "-eo", "etime,args", "-ww"], capture_output=True, text=True).stdout
+                    
                     downloads = []
                     for line in ps_out.split('\n'):
                         if 'yt-dlp' in line and 'grep' not in line:
@@ -137,11 +124,29 @@ def main():
                                 urls = re.findall(r'(https?://[^\s]+)', cmd)
                                 target = urls[0] if urls else "Unknown URL"
                                 
-                                # Format nicely based on whether it's the 24/7 monitor or an on-demand download
+                                # Calculate size for this specific download based on yt-dlp output arg
+                                session_size_mb = 0
+                                match = re.search(r'-o\s+([^\s]+)', cmd)
+                                if match:
+                                    out_file = match.group(1)
+                                    session_dir = os.path.dirname(out_file)
+                                    if os.path.exists(session_dir):
+                                        for root, _, files in os.walk(session_dir):
+                                            for f in files:
+                                                if f.endswith(('.part', '.mp4', '.temp.mp4')):
+                                                    try:
+                                                        session_size_mb += os.path.getsize(os.path.join(root, f)) / (1024 * 1024)
+                                                    except:
+                                                        pass
+                                                        
+                                size_text = f"\n💾 *Current Download Size:* `{session_size_mb:.1f} MB`" if session_size_mb > 0 else ""
+                                
+                                # Because we use -ww, the string is never truncated. 
+                                # We can just label it as an active download.
                                 if "wait-for-video" in cmd:
-                                    downloads.append(f"📡 *Live Monitor / Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
+                                    downloads.append(f"📡 *Active Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
                                 else:
-                                    downloads.append(f"⚡ *On-Demand Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
+                                    downloads.append(f"⚡ *Active Download*\nTarget: `{target}`\n⏳ *Active for: {etime}*{size_text}")
                                     
                     dl_text = "\n\n".join(downloads) if downloads else "No active downloads."
                     
