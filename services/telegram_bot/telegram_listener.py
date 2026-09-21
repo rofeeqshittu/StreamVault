@@ -153,6 +153,21 @@ def main():
                     send_message(f"📊 *StreamVault Status*\n\n{status_text}\n\n*Current Activity:*\n{dl_text}")
                     continue
 
+                if text.strip().lower() == "/update":
+                    send_message("🔄 *Initiating Update...*\nPulling latest code from GitHub and restarting services. I will be back online in a few seconds!")
+                    try:
+                        # Pull latest code from GitHub
+                        subprocess.run(["git", "pull"], cwd=str(BASE_DIR), check=True, capture_output=True, text=True)
+                        
+                        # Restart both the main monitor and this bot service. 
+                        # We use Popen so it runs detached, since restarting this bot will kill the current process.
+                        subprocess.Popen(["systemctl", "restart", "streamvault", "streamvault-bot"])
+                    except subprocess.CalledProcessError as e:
+                        send_message(f"❌ *Update Failed!*\nGit output:\n`{e.stderr}`")
+                    except Exception as e:
+                        send_message(f"❌ *Update Failed!*\n`{str(e)}`")
+                    continue
+
                 url = extract_url(text)
                 if url:
                     skip_upload = "noupload" in text.lower().replace("-", "").replace("_", "")

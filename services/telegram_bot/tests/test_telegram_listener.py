@@ -99,5 +99,43 @@ class TestTelegramListener(unittest.TestCase):
         self.assertIn("https://youtube.com/watch?v=123", text)
         self.assertIn("https://youtube.com/watch?v=456", text)
 
+    @patch('telegram_listener.subprocess.Popen')
+    @patch('telegram_listener.subprocess.run')
+    @patch('telegram_listener.requests.post')
+    @patch('telegram_listener.requests.get')
+    def test_update_command(self, mock_get, mock_post, mock_run, mock_popen):
+        os.environ['TELEGRAM_BOT_TOKEN'] = 'test_token'
+        os.environ['TELEGRAM_CHAT_ID'] = '12345'
+        
+        mock_get.return_value.json.side_effect = [
+            {
+                "ok": True,
+                "result": [
+                    {
+                        "update_id": 1,
+                        "message": {
+                            "chat": {"id": 12345},
+                            "text": "/update"
+                        }
+                    }
+                ]
+            },
+            Exception("Stop Loop")
+        ]
+        
+        try:
+            telegram_listener.main()
+        except Exception as e:
+            if str(e) != "Stop Loop":
+                raise e
+                
+        # Verify it sent the update message
+        mock_post.assert_called_once()
+        self.assertIn("Initiating Update", mock_post.call_args[1]['data']['text'])
+        
+        # Verify it ran git pull and systemctl restart
+        mock_run.assert_called_once_with(["git", "pull"], cwd=str(telegram_listener.BASE_DIR), check=True, capture_output=True, text=True)
+        mock_popen.assert_called_once_with(["systemctl", "restart", "streamvault", "streamvault-bot"])
+
 if __name__ == '__main__':
     unittest.main()
