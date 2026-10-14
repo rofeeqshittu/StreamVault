@@ -10,3 +10,4 @@ rclone.conf
 staging/
 __pycache__/
 *.pyc
+.bot_offset

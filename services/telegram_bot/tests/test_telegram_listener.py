@@ -139,7 +139,7 @@ class TestTelegramListener(unittest.TestCase):
         
         # Verify it ran git pull and systemctl restart
         mock_run.assert_called_once_with(["git", "pull"], cwd=str(telegram_listener.BASE_DIR), check=True, capture_output=True, text=True)
-        mock_popen.assert_called_once_with(["systemctl", "restart", "streamvault", "streamvault-bot"])
+        mock_popen.assert_called_once_with(["bash", "-c", "sleep 2 && systemctl restart streamvault streamvault-bot"])
 
 if __name__ == '__main__':
     unittest.main()

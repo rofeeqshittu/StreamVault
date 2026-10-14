@@ -79,7 +79,14 @@ def main():
 
     API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
     print("Telegram Listener Started. Polling for commands...")
+    
+    offset_file = BASE_DIR / '.bot_offset'
     offset = None
+    if offset_file.exists():
+        try:
+            offset = int(offset_file.read_text().strip())
+        except (ValueError, OSError):
+            offset = None
     
     while True:
         try:
@@ -92,6 +99,10 @@ def main():
                 
             for update in data.get("result", []):
                 offset = update["update_id"] + 1
+                try:
+                    offset_file.write_text(str(offset))
+                except OSError:
+                    pass
                 
                 message = update.get("message")
                 if not message:
@@ -156,12 +167,17 @@ def main():
                 if text.strip().lower() == "/update":
                     send_message("🔄 *Initiating Update...*\nPulling latest code from GitHub and restarting services. I will be back online in a few seconds!")
                     try:
+                        # Acknowledge offset with Telegram to prevent loop
+                        try:
+                            requests.get(f"{API_URL}/getUpdates", params={"offset": offset, "limit": 1, "timeout": 2})
+                        except Exception:
+                            pass
+
                         # Pull latest code from GitHub
                         subprocess.run(["git", "pull"], cwd=str(BASE_DIR), check=True, capture_output=True, text=True)
                         
-                        # Restart both the main monitor and this bot service. 
-                        # We use Popen so it runs detached, since restarting this bot will kill the current process.
-                        subprocess.Popen(["systemctl", "restart", "streamvault", "streamvault-bot"])
+                        # Restart both services cleanly after a 2-second buffer
+                        subprocess.Popen(["bash", "-c", "sleep 2 && systemctl restart streamvault streamvault-bot"])
                     except subprocess.CalledProcessError as e:
                         send_message(f"❌ *Update Failed!*\nGit output:\n`{e.stderr}`")
                     except Exception as e:
