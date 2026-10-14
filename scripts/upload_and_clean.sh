@@ -50,9 +50,11 @@ if [ "$FILE_SIZE" -eq 0 ]; then
     exit 1
 fi
 
-# 1. Generate AI Executive Brief
+# 1. Generate AI Executive Brief (non-fatal if AI generation encounters issues)
 echo "Triggering AI Documentation Engine..."
-python3 "$SCRIPT_DIR/generate_ai_docs.py" "$FILE_PATH"
+python3 "$SCRIPT_DIR/generate_ai_docs.py" "$FILE_PATH" || {
+    echo "Warning: AI Documentation Engine encountered an issue. Proceeding with video upload."
+}
 
 DOCX_PATH="${FILE_PATH%.*}.docx"
 

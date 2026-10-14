@@ -8,19 +8,38 @@ from google import genai
 from google.genai import types
 
 def extract_audio(video_path: Path) -> Path:
-    audio_path = video_path.with_suffix('.mp3')
-    if audio_path.exists():
-        return audio_path
-    
+    # First check if audio already extracted
+    for ext in ('.m4a', '.mp3'):
+        candidate = video_path.with_suffix(ext)
+        if candidate.exists() and candidate.stat().st_size > 0:
+            return candidate
+
     print(f"Extracting lightweight audio from {video_path.name}...")
-    cmd = [
+    # Fast stream-copy first (instantaneous, 0 CPU re-encoding overhead)
+    m4a_path = video_path.with_suffix('.m4a')
+    copy_cmd = [
         "ffmpeg", "-y", "-i", str(video_path),
-        "-vn", "-acodec", "libmp3lame", "-b:a", "128k",
-        str(audio_path)
+        "-vn", "-c:a", "copy",
+        str(m4a_path)
     ]
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return audio_path
+        subprocess.run(copy_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if m4a_path.exists() and m4a_path.stat().st_size > 0:
+            print("Extracted audio via stream-copy in seconds.")
+            return m4a_path
+    except subprocess.CalledProcessError:
+        pass
+
+    # Fallback to fast mono mp3 transcode if stream-copy is incompatible
+    mp3_path = video_path.with_suffix('.mp3')
+    fallback_cmd = [
+        "ffmpeg", "-y", "-i", str(video_path),
+        "-vn", "-acodec", "libmp3lame", "-b:a", "64k", "-ac", "1",
+        str(mp3_path)
+    ]
+    try:
+        subprocess.run(fallback_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return mp3_path
     except subprocess.CalledProcessError as e:
         print(f"Error extracting audio: {e}")
         sys.exit(1)
@@ -51,6 +70,7 @@ def generate_docs(media_path: Path):
     os.rename(media_path, safe_path)
     
     print(f"Uploading {media_path.name} to Gemini...")
+    uploaded_file = None
     try:
         uploaded_file = upload_client.files.upload(file=str(safe_path))
     finally:
@@ -105,10 +125,14 @@ def generate_docs(media_path: Path):
         available_models = [m.name.replace('models/', '') for m in client.models.list()]
         print(f"Found models: {available_models}")
         
-        # In 2026, old models are locked for new users. 
-        # We explicitly use gemini-flash-latest to let Google dynamically route 
-        # to the newest active free-tier flash model (e.g. 3.5 or 3.6).
-        target_model = 'gemini-flash-latest'
+        target_model = None
+        for preferred in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']:
+            if preferred in available_models:
+                target_model = preferred
+                break
+        if not target_model:
+            flash_models = [m for m in available_models if 'flash' in m]
+            target_model = flash_models[0] if flash_models else 'gemini-2.5-flash'
                 
         print(f"Synthesizing Executive Brief via {target_model}...")
         
@@ -152,10 +176,14 @@ def generate_docs(media_path: Path):
         doc.add_paragraph(f"Error Details: {str(e)}")
         doc.save(docx_path)
     finally:
-        print("Cleaning up Gemini File API resource...")
-        upload_client.files.delete(name=uploaded_file.name)
-        # Clean up local mp3 if we extracted it
-        if media_path.suffix == '.mp3':
+        if uploaded_file is not None:
+            print("Cleaning up Gemini File API resource...")
+            try:
+                upload_client.files.delete(name=uploaded_file.name)
+            except Exception:
+                pass
+        # Clean up local audio if we extracted it
+        if media_path.suffix in ('.mp3', '.m4a') and media_path.exists():
             try:
                 os.remove(media_path)
             except OSError:
