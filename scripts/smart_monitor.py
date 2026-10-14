@@ -64,14 +64,16 @@ def process_batch(chunks, url, session_dir, base_dir, staging_dir, skip_upload, 
             except:
                 pass
             
-    if not skip_upload:
-        script_dir = base_dir / "scripts"
-        upload_script = script_dir / "upload_and_clean.sh"
-        if upload_script.exists():
-            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Triggering post-processing AI Document Generation for Part {part_num}...")
-            subprocess.run([str(upload_script), str(merged_file)])
-        else:
-            print("Upload script not found. Skipping post-processing.")
+    script_dir = base_dir / "scripts"
+    upload_script = script_dir / "upload_and_clean.sh"
+    if upload_script.exists():
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Triggering post-processing AI Document Generation for Part {part_num}...")
+        env = os.environ.copy()
+        if skip_upload:
+            env["SKIP_VIDEO_UPLOAD"] = "1"
+        subprocess.run([str(upload_script), str(merged_file)], env=env)
+    else:
+        print("Upload script not found. Skipping post-processing.")
             
 
 def smart_monitor(url, skip_upload=False):

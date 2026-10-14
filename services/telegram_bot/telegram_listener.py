@@ -186,16 +186,17 @@ def main():
 
                 url = extract_url(text)
                 if url:
-                    skip_upload = "noupload" in text.lower().replace("-", "").replace("_", "")
+                    lower_text = text.lower()
+                    skip_upload = any(k in lower_text for k in ["/brief", "/summary", "/doc", "/docs", "/noupload", "brief", "summary", "no upload", "noupload"])
                     
                     if skip_upload:
-                        send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. **Video upload to Google Drive will be skipped.** You will receive the AI Brief when it completes.")
+                        send_message(f"📝 *AI Brief Only (No Video Upload)*\n\nTarget: `{url}`\n\nGenerating your AI Executive Brief now. Video upload to Google Drive will be skipped, and the brief document will be sent directly here.")
                     else:
-                        send_message(f"🚀 *On-Demand Command Received!*\n\nTarget: `{url}`\n\nI have dispatched the background agents to download and process this stream. You will receive the AI Brief when it completes.")
+                        send_message(f"🚀 *Full Archive Command Received!*\n\nTarget: `{url}`\n\nDownloading video, generating AI Executive Brief, and archiving to Google Drive. You will receive the brief document when complete.")
                         
                     trigger_download(url, skip_upload)
                 else:
-                    send_message("❌ No URL detected. Send a YouTube link to download, or type `/status` to check the live monitor.")
+                    send_message("❌ No URL detected.\n\nCommands:\n• Paste a link to archive video + AI brief to Google Drive\n• Type `/brief <link>` or `/summary <link>` for AI brief only (skips video upload)\n• Type `/status` to check the monitor\n• Type `/update` to update StreamVault")
                     
         except Exception as e:
             print(f"Polling error: {e}")

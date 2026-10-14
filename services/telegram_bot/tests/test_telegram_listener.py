@@ -141,5 +141,37 @@ class TestTelegramListener(unittest.TestCase):
         mock_run.assert_called_once_with(["git", "pull"], cwd=str(telegram_listener.BASE_DIR), check=True, capture_output=True, text=True)
         mock_popen.assert_called_once_with(["bash", "-c", "sleep 2 && systemctl restart streamvault streamvault-bot"])
 
+    @patch('telegram_listener.trigger_download')
+    @patch('telegram_listener.requests.post')
+    @patch('telegram_listener.requests.get')
+    def test_brief_command(self, mock_get, mock_post, mock_trigger):
+        os.environ['TELEGRAM_BOT_TOKEN'] = 'test_token'
+        os.environ['TELEGRAM_CHAT_ID'] = '12345'
+        
+        mock_get.return_value.json.side_effect = [
+            {
+                "ok": True,
+                "result": [
+                    {
+                        "update_id": 1,
+                        "message": {
+                            "chat": {"id": 12345},
+                            "text": "/brief https://youtube.com/watch?v=abc123xyz"
+                        }
+                    }
+                ]
+            },
+            KeyboardInterrupt()
+        ]
+        
+        try:
+            telegram_listener.main()
+        except KeyboardInterrupt:
+            pass
+            
+        mock_post.assert_called_once()
+        self.assertIn("AI Brief Only", mock_post.call_args[1]['data']['text'])
+        mock_trigger.assert_called_once_with("https://youtube.com/watch?v=abc123xyz", True)
+
 if __name__ == '__main__':
     unittest.main()
