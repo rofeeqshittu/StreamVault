@@ -126,13 +126,19 @@ def generate_docs(media_path: Path):
         print(f"Found models: {available_models}")
         
         target_model = None
-        for preferred in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest']:
+        for preferred in [
+            'gemini-3.8-flash',
+            'gemini-3.7-flash',
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-flash-latest'
+        ]:
             if preferred in available_models:
                 target_model = preferred
                 break
         if not target_model:
-            flash_models = [m for m in available_models if 'flash' in m]
-            target_model = flash_models[0] if flash_models else 'gemini-2.5-flash'
+            flash_models = [m for m in available_models if 'flash' in m and 'preview' not in m and 'tts' not in m and 'image' not in m]
+            target_model = flash_models[0] if flash_models else 'gemini-3.8-flash'
                 
         print(f"Synthesizing Executive Brief via {target_model}...")
         
