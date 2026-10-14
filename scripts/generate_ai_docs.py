@@ -125,7 +125,7 @@ def generate_docs(media_path: Path):
         available_models = [m.name.replace('models/', '') for m in client.models.list()]
         print(f"Found models: {available_models}")
         
-        target_model = None
+        candidate_models = []
         for preferred in [
             'gemini-3.8-flash',
             'gemini-3.7-flash',
@@ -133,31 +133,42 @@ def generate_docs(media_path: Path):
             'gemini-3.5-flash',
             'gemini-flash-latest'
         ]:
-            if preferred in available_models:
-                target_model = preferred
-                break
-        if not target_model:
+            if preferred in available_models and preferred not in candidate_models:
+                candidate_models.append(preferred)
+
+        if not candidate_models:
             flash_models = [m for m in available_models if 'flash' in m and 'preview' not in m and 'tts' not in m and 'image' not in m]
-            target_model = flash_models[0] if flash_models else 'gemini-3.8-flash'
+            candidate_models = flash_models if flash_models else ['gemini-3.8-flash', 'gemini-flash-latest']
                 
-        print(f"Synthesizing Executive Brief via {target_model}...")
+        print(f"Candidate models for synthesis: {candidate_models}")
         
-        # Robust retry loop for transient network/API drops during long generations
-        max_retries = 3
         response = None
-        for attempt in range(max_retries):
-            try:
-                response = client.models.generate_content(
-                    model=target_model,
-                    contents=[uploaded_file, prompt],
-                    config=types.GenerateContentConfig(temperature=0.2)
-                )
+        last_error = None
+        for target_model in candidate_models:
+            print(f"Synthesizing Executive Brief via {target_model}...")
+            # Try up to 2 times on this model before failing over to the next candidate model
+            for attempt in range(2):
+                try:
+                    response = client.models.generate_content(
+                        model=target_model,
+                        contents=[uploaded_file, prompt],
+                        config=types.GenerateContentConfig(temperature=0.2)
+                    )
+                    break
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e).lower()
+                    print(f"Generation attempt {attempt + 1} on {target_model} failed: {e}")
+                    # If high demand (503) or quota (429), failover to next model immediately
+                    if "503" in err_str or "unavailable" in err_str or "high demand" in err_str:
+                        print(f"Model {target_model} is busy (503). Failing over to next candidate model...")
+                        break
+                    time.sleep(5 * (attempt + 1))
+            if response is not None:
                 break
-            except Exception as e:
-                print(f"Generation attempt {attempt + 1} failed: {e}")
-                if attempt == max_retries - 1:
-                    raise e
-                time.sleep(15 * (attempt + 1))
+
+        if response is None:
+            raise last_error if last_error else RuntimeError("All candidate models failed to generate content.")
         
         import docx
         
