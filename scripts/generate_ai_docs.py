@@ -50,10 +50,10 @@ def generate_docs(media_path: Path):
         print("GEMINI_API_KEY not set. Skipping AI generation.")
         sys.exit(0)
 
-    # Configure a 10-minute timeout (600s) which is the maximum allowed by the API for generation
-    client = genai.Client(api_key=api_key, http_options={'timeout': 600.0})
-    # Configure a much longer timeout (60m) for uploading large audio files
-    upload_client = genai.Client(api_key=api_key, http_options={'timeout': 3600.0})
+    # Configure a 10-minute timeout (600,000 ms) for generation
+    client = genai.Client(api_key=api_key, http_options={'timeout': 600000})
+    # Configure a 60-minute timeout (3,600,000 ms) for uploading large audio files
+    upload_client = genai.Client(api_key=api_key, http_options={'timeout': 3600000})
     
     import shutil
     import time
