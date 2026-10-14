@@ -5,6 +5,7 @@ import sys
 import os
 import shutil
 from pathlib import Path
+import re
 
 def is_live_stream(url):
     try:
@@ -27,14 +28,27 @@ def process_batch(chunks, url, session_dir, base_dir, staging_dir, skip_upload, 
             f.write(f"file '{c.name}'\n")
             
     # Get metadata for the final filename
-    meta_cmd = ["yt-dlp", "--print", "%(uploader)s_%(id)s", url]
+    meta_cmd = ["yt-dlp", "--print", "%(uploader)s|||%(title)s|||%(id)s", url]
     res = subprocess.run(meta_cmd, capture_output=True, text=True)
-    prefix = res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else f"unknown_{session_id}"
-    
-    # Clean the prefix
-    safe_prefix = "".join([c if c.isalnum() or c in ['_', '-'] else '_' for c in prefix])
+    if res.returncode == 0 and res.stdout.strip():
+        parts = res.stdout.strip().split("|||")
+        uploader = parts[0].strip() if len(parts) > 0 and parts[0].strip() and parts[0].strip() != "NA" else ""
+        title = parts[1].strip() if len(parts) > 1 and parts[1].strip() and parts[1].strip() != "NA" else f"stream_{session_id}"
+        if uploader:
+            raw_name = f"{uploader} - {title}"
+        else:
+            raw_name = title
+    else:
+        raw_name = f"stream_{session_id}"
+
+    # Sanitize for safe filesystem and cloud storage usage
+    safe_name = re.sub(r'[\\/*?:"<>|]', '', raw_name).strip()
+    safe_name = re.sub(r'\s+', ' ', safe_name)
+    if len(safe_name) > 120:
+        safe_name = safe_name[:120].strip()
+
     part_suffix = f"_part{part_num}" if part_num > 1 else ""
-    merged_file = staging_dir / f"ondemand_{safe_prefix}{part_suffix}.mp4"
+    merged_file = staging_dir / f"{safe_name}{part_suffix}.mp4"
     
     if len(chunks) == 1:
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Only 1 chunk recorded. Skipping FFmpeg merge to save disk space.")

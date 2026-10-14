@@ -34,7 +34,7 @@ class TestSmartMonitor(unittest.TestCase):
     def test_process_batch_single_chunk(self, mock_run, mock_move):
         mock_proc = MagicMock()
         mock_proc.returncode = 0
-        mock_proc.stdout = "test_uploader_test_id"
+        mock_proc.stdout = "BuffettMunger|||Advice on Success|||12345"
         mock_run.return_value = mock_proc
 
         chunk = MagicMock(spec=Path)
@@ -60,6 +60,8 @@ class TestSmartMonitor(unittest.TestCase):
             session_id="123"
         )
         mock_move.assert_called_once()
+        # Verify staging_dir was called with clean YouTube title without 'ondemand_'
+        staging_dir.__truediv__.assert_called_with("BuffettMunger - Advice on Success.mp4")
 
 if __name__ == '__main__':
     unittest.main()
