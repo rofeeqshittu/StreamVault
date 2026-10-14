@@ -63,24 +63,30 @@ START_TIME=$(date +%s)
 # 2. Telegram Alert with Attached Document
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
     echo "Sending Telegram alert with AI Document attached..."
+    if [ "${SKIP_VIDEO_UPLOAD:-0}" == "1" ]; then
+        STATUS_CAPTION="✅ *StreamVault AI Brief Complete!*
+        
+Executive Brief generated for: \`${FILENAME}\`
+The brief has been archived to your Google Drive: \`${GDRIVE_PATH}\`"
+    else
+        STATUS_CAPTION="✅ *StreamVault Success!*
+        
+Video and AI Brief uploaded for: \`${FILENAME}\`
+Check your Google Drive folder: \`${GDRIVE_PATH}\`"
+    fi
+
     if [ -f "$DOCX_PATH" ]; then
         curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
             -F chat_id="${TELEGRAM_CHAT_ID}" \
             -F document=@"$DOCX_PATH" \
-            -F caption="✅ *StreamVault Success!*
-            
-Video uploaded for: \`${FILENAME}\`
-Here is your complete AI Executive Brief.
-
-Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
+            -F caption="$STATUS_CAPTION" \
             -F parse_mode="Markdown" > /dev/null
     else
         curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="✅ *StreamVault Success!* (AI brief failed to generate)
+            -d text="✅ *StreamVault Complete!* (AI brief failed to generate)
             
-Video uploaded for: \`${FILENAME}\`
-
+Processed: \`${FILENAME}\`
 Check your Google Drive folder: \`${GDRIVE_PATH}\`" \
             -d parse_mode="Markdown" > /dev/null
     fi
