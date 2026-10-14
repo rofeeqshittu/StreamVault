@@ -94,6 +94,9 @@ def smart_monitor(url, skip_upload=False):
         chunk_file = session_dir / f"chunk_{chunk_num:03d}.mp4"
         cmd = [
             "yt-dlp",
+            "--socket-timeout", "30",
+            "--retries", "5",
+            "--fragment-retries", "10",
             "--wait-for-video", "60",
             "--extractor-args", "youtube:player_client=ios,android,web",
             "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
@@ -107,9 +110,11 @@ def smart_monitor(url, skip_upload=False):
         process = subprocess.Popen(cmd)
         
         force_cut = False
+        last_size = -1
+        stagnant_count = 0
         while process.poll() is None:
             # Check disk space every 10 seconds
-            total, used, free = shutil.disk_usage("/")
+            total, used, free = shutil.disk_usage(str(base_dir))
             free_mb = free / (1024 * 1024)
             if free_mb < 1024: # Less than 1 GB free
                 print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CRITICAL: Low disk space ({free_mb:.0f} MB left). Force-cutting current chunk!")
@@ -120,6 +125,35 @@ def smart_monitor(url, skip_upload=False):
                     process.kill()
                 force_cut = True
                 break
+
+            # Check for stalled download (e.g. broadcast ended but ffmpeg/yt-dlp is retrying dead connections)
+            current_size = 0
+            for f in (chunk_file, chunk_file.with_suffix('.mp4.part'), chunk_file.with_name(chunk_file.name.replace('.mp4', '.temp.mp4'))):
+                if f.exists():
+                    try:
+                        current_size = f.stat().st_size
+                        break
+                    except OSError:
+                        pass
+
+            if current_size > 0 and current_size == last_size:
+                stagnant_count += 1
+                # If size hasn't changed for 60 seconds (6 * 10s), check if stream is still live
+                if stagnant_count >= 6:
+                    if not is_live_stream(url):
+                        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Stream stalled and is no longer live. Concluding chunk capture...")
+                        process.terminate()
+                        try:
+                            process.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                        break
+                    else:
+                        stagnant_count = 0
+            else:
+                last_size = current_size
+                stagnant_count = 0
+
             time.sleep(10)
             
         # yt-dlp might leave a .part or .temp.mp4 file if it was forcefully terminated

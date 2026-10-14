@@ -5,5 +5,8 @@
 *.part
 *.tmp
 logs/
+*.log
 rclone.conf
 staging/
+__pycache__/
+*.pyc

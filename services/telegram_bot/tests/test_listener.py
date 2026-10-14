@@ -4,6 +4,14 @@ from pathlib import Path
 
 # Add parent dir to path to import listener
 sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from unittest.mock import MagicMock
+if 'requests' not in sys.modules:
+    try:
+        import requests
+    except ImportError:
+        sys.modules['requests'] = MagicMock()
+
 from telegram_listener import extract_url
 
 class TestTelegramListener(unittest.TestCase):

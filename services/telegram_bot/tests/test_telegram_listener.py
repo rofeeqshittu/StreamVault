@@ -6,6 +6,12 @@ from unittest.mock import patch, MagicMock
 # Add parent directory to path so we can import the listener
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+if 'requests' not in sys.modules:
+    try:
+        import requests
+    except ImportError:
+        sys.modules['requests'] = MagicMock()
+
 import telegram_listener
 
 class TestTelegramListener(unittest.TestCase):
@@ -36,7 +42,7 @@ class TestTelegramListener(unittest.TestCase):
                 ]
             },
             # Return no more updates to let it loop and we'll break it
-            Exception("Stop Loop")
+            KeyboardInterrupt()
         ]
         
         # Mock subprocess.run for ps aux (is_running) and ps -eo (downloads)
@@ -80,9 +86,8 @@ class TestTelegramListener(unittest.TestCase):
         
         try:
             telegram_listener.main()
-        except Exception as e:
-            if str(e) != "Stop Loop":
-                raise e
+        except KeyboardInterrupt:
+            pass
                 
         # Verify the message sent to Telegram
         mock_post.assert_called_once()
@@ -120,14 +125,13 @@ class TestTelegramListener(unittest.TestCase):
                     }
                 ]
             },
-            Exception("Stop Loop")
+            KeyboardInterrupt()
         ]
         
         try:
             telegram_listener.main()
-        except Exception as e:
-            if str(e) != "Stop Loop":
-                raise e
+        except KeyboardInterrupt:
+            pass
                 
         # Verify it sent the update message
         mock_post.assert_called_once()
