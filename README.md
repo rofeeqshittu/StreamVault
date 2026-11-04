@@ -61,11 +61,22 @@ sudo nano .env
 2. **TELEGRAM_BOT_TOKEN:** Talk to `@BotFather` on Telegram to create a bot and get the token.
 3. **TELEGRAM_CHAT_ID:** Send a message to your bot, then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your `chat_id`.
 
-Edit your target channels:
+Configure your target channels using either method:
+
+**Method A: Dedicated channels file (Recommended for multiple channels)**
 ```bash
+sudo cp config/channels.template.json config/channels.json
 sudo nano config/channels.json
 ```
-*(Ensure you use the `/live` URL format, e.g., `https://www.youtube.com/@ChannelName/live`)*
+*(Ensure you use the `/live` URL format, e.g., `https://www.youtube.com/@ChannelName/live`. Note: `config/channels.json` is gitignored so your channels remain private).*
+
+**Method B: In `.env` directly**
+Add your stream or channel URL into `.env`:
+```bash
+TARGET_CHANNELS="https://www.youtube.com/@ChannelName/live"
+```
+*(You can also provide a comma-separated list of URLs)*
+
 
 ---
 

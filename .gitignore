@@ -11,3 +11,4 @@ staging/
 __pycache__/
 *.pyc
 .bot_offset
+config/channels.json
